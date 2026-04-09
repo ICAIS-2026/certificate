@@ -249,6 +249,26 @@ select.field-input option {
   .page { padding: 15px; }
   .portal-card { padding: 24px 20px; }
 }
+
+@media (max-width: 1024px) {
+  .page { padding: 18px; }
+  .page.top { padding-top: 34px; padding-bottom: 56px; }
+  .tracks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .track-btn { padding: 32px 20px; }
+  .portal-wrap { max-width: 760px; }
+  .btn-row { width: 100%; }
+  .btn-row .btn-main, .btn-row .btn-sec { flex: 1 1 280px; }
+}
+
+@media (max-width: 768px) {
+  .pg-header { text-align: center; }
+  #pg-t1 .pg-header { text-align: center !important; }
+  .back-btn { align-self: center; }
+  .tracks-grid { grid-template-columns: 1fr; }
+  .track-btn { padding: 28px 18px; }
+  .btn-row { flex-direction: column; align-items: stretch; }
+  .btn-row .btn-main, .btn-row .btn-sec { width: 100%; }
+}
 </style>
 </head>
 <body>
@@ -598,48 +618,21 @@ function drawCert(ctx, W, H, paper, imgs) {
   const bW = 500, bH = 64, bY = 510;
   ctx.fillStyle = '#C8181A'; ctx.beginPath(); ctx.roundRect(W/2-bW/2, bY, bW, bH, 32); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.font = `600 24px "DM Sans"`; ctx.letterSpacing='3px';
-  ctx.fillText('THIS CERTIFIES THAT', W/2, bY+42);
+  ctx.fillText('THIS IS TO CERTIFY THAT', W/2, bY+42);
 
   /* Name */
   ctx.fillStyle = '#000'; ctx.font = `bold ${W*0.062}px "Cormorant Garamond"`;
   ctx.fillText(paper.author, W/2, 700);
   ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(W/2-400, 730); ctx.lineTo(W/2+400, 730); ctx.stroke();
 
-  /* Affiliation */
-  ctx.fillStyle = '#333'; ctx.font = `600 38px "DM Sans"`;
-  const affilText = paper.affil.trim();
-  const affilMaxW = W * 0.72;
-  const affilLineH = 50;
-  const affilY = 790;
-  let affilLine = '', affilLines = [];
-  if (affilText) {
-    const affilWords = affilText.split(/\s+/);
-    for (let word of affilWords) {
-      const next = affilLine ? `${affilLine} ${word}` : word;
-      if (ctx.measureText(next).width <= affilMaxW) {
-        affilLine = next;
-      } else {
-        if (affilLine) affilLines.push(affilLine);
-        affilLine = word;
-        if (ctx.measureText(affilLine).width > affilMaxW) {
-          affilLines.push(affilLine);
-          affilLine = '';
-        }
-      }
-    }
-    if (affilLine) affilLines.push(affilLine);
-    affilLines.forEach((l, i) => ctx.fillText(l, W/2, affilY + i * affilLineH));
-  }
-
   /* Body */
-  const affilLineCount = affilLines.length > 0 ? affilLines.length : 1;
-  const bodyY = affilY + ((affilLineCount - 1) * affilLineH) + 90;
+  const bodyY = 820;
   ctx.fillStyle = '#444'; ctx.font = `italic 500 34px "Cormorant Garamond"`;
-  ctx.fillText('has successfully presented the research paper titled', W/2, bodyY);
+  ctx.fillText('presented a paper titled', W/2, bodyY);
 
   /* Title */
   const titleY = bodyY + 70;
-  ctx.fillStyle = '#C8181A'; ctx.font = `700 44px "Cormorant Garamond"`;
+  ctx.fillStyle = '#111'; ctx.font = `italic 700 54px "Cormorant Garamond"`;
   const tWords = paper.title.split(' ');
   let line = '', lines = [], maxW = W*0.8;
   for(let w of tWords) {
@@ -647,17 +640,31 @@ function drawCert(ctx, W, H, paper, imgs) {
     else line += w + ' ';
   }
   lines.push(line);
-  lines.forEach((l, i) => ctx.fillText(i==0?'"'+l.trim():l.trim()+(i==lines.length-1?'"':''), W/2, titleY + i*65));
+  const titleLineH = 62;
+  lines.forEach((l, i) => ctx.fillText(i==0?'"'+l.trim():l.trim()+(i==lines.length-1?'"':''), W/2, titleY + i*titleLineH));
 
   /* Conference info */
-  const confY = titleY + lines.length*65 + 40;
-  ctx.fillStyle = '#555'; ctx.font = `500 32px "DM Sans"`;
-  ctx.fillText('at the International Conference on Artificial Intelligence and Security', W/2, confY);
-  ctx.fillStyle = '#000'; ctx.font = `bold 32px "DM Sans"`;
-  ctx.fillText('ICAIS 2026 · April 2–3, 2026 · Indore, India (Hybrid Mode)', W/2, confY+50);
+  const confY = titleY + lines.length * titleLineH + 44;
+  const confText = 'at the 4th Annual Conference on Public Finance and Policy jointly organized by Centre for Public Finance, Madras School of Economics and Gulati Institute of Finance and Taxation';
+  const confWords = confText.split(' ');
+  const confLines = [];
+  let confLine = '';
+  const confMaxW = W * 0.9;
+  const confLineH = 42;
+  ctx.fillStyle = '#444'; ctx.font = `500 32px "DM Sans"`;
+  for (const word of confWords) {
+    const next = confLine ? `${confLine} ${word}` : word;
+    if (ctx.measureText(next).width <= confMaxW) confLine = next;
+    else { confLines.push(confLine); confLine = word; }
+  }
+  if (confLine) confLines.push(confLine);
+  confLines.forEach((l, i) => ctx.fillText(l, W/2, confY + i * confLineH));
+  const confEndY = confY + (confLines.length * confLineH);
+  ctx.fillStyle = '#000'; ctx.font = `500 36px "Cormorant Garamond"`;
+  ctx.fillText('held at MSE, Chennai, during 23 - 24 March 2026.', W/2, confEndY + 16);
 
   /* Signatures */
-  const sigY = confY + 220;
+  const sigY = confEndY + 170;
   const sigSp = W * 0.3;
   const sigs = [
     { n: 'Dr. Anshuman Jaswal', r: "Director, SVKM's NMIMS Indore" },
