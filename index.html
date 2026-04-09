@@ -624,11 +624,11 @@ function drawCert(ctx, W, H, paper, imgs) {
     } else affilLine = next;
   }
   if (affilLine.trim()) affilLines.push(affilLine.trim());
-  if (affilLines.length === 0) affilLines.push('');
-  affilLines.forEach((l, i) => ctx.fillText(l.trim(), W/2, affilY + i * affilLineH));
+  if (paper.affil.trim()) affilLines.forEach((l, i) => ctx.fillText(l, W/2, affilY + i * affilLineH));
 
   /* Body */
-  const bodyY = affilY + ((affilLines.length - 1) * affilLineH) + 90;
+  const affilLineCount = Math.max(1, affilLines.length);
+  const bodyY = affilY + ((affilLineCount - 1) * affilLineH) + 90;
   ctx.fillStyle = '#444'; ctx.font = `italic 500 34px "Cormorant Garamond"`;
   ctx.fillText('has successfully presented the research paper titled', W/2, bodyY);
 
