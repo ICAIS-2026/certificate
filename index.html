@@ -567,7 +567,8 @@ function drawCert(ctx, W, H, paper, imgs) {
     ctx.fillRect(left, logoY, logoWidth, logoHeight);
     ctx.restore();
 
-    if (img) {
+    const hasDrawableImage = img && img.width > 0 && img.height > 0;
+    if (hasDrawableImage) {
       const scale = Math.min(logoWidth / img.width, logoHeight / img.height);
       const displayWidth = img.width * scale;
       const displayHeight = img.height * scale;
