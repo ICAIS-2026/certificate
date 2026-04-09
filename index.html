@@ -607,27 +607,32 @@ function drawCert(ctx, W, H, paper, imgs) {
 
   /* Affiliation */
   ctx.fillStyle = '#333'; ctx.font = `600 38px "DM Sans"`;
-  const affilWords = paper.affil.split(' ');
+  const affilText = paper.affil.trim();
   const affilMaxW = W * 0.72;
   const affilLineH = 50;
   const affilY = 790;
   let affilLine = '', affilLines = [];
-  for (let word of affilWords) {
-    const next = affilLine + word + ' ';
-    if (ctx.measureText(next).width > affilMaxW) {
-      if (affilLine.trim()) affilLines.push(affilLine.trim());
-      affilLine = word + ' ';
-      if (ctx.measureText(affilLine).width > affilMaxW) {
-        affilLines.push(affilLine.trim());
-        affilLine = '';
+  if (affilText) {
+    const affilWords = affilText.split(/\s+/);
+    for (let word of affilWords) {
+      const next = affilLine ? `${affilLine} ${word}` : word;
+      if (ctx.measureText(next).width <= affilMaxW) {
+        affilLine = next;
+      } else {
+        if (affilLine) affilLines.push(affilLine);
+        affilLine = word;
+        if (ctx.measureText(affilLine).width > affilMaxW) {
+          affilLines.push(affilLine);
+          affilLine = '';
+        }
       }
-    } else affilLine = next;
+    }
+    if (affilLine) affilLines.push(affilLine);
+    affilLines.forEach((l, i) => ctx.fillText(l, W/2, affilY + i * affilLineH));
   }
-  if (affilLine.trim()) affilLines.push(affilLine.trim());
-  if (paper.affil.trim()) affilLines.forEach((l, i) => ctx.fillText(l, W/2, affilY + i * affilLineH));
 
   /* Body */
-  const affilLineCount = affilLines.length;
+  const affilLineCount = affilLines.length > 0 ? affilLines.length : 1;
   const bodyY = affilY + ((affilLineCount - 1) * affilLineH) + 90;
   ctx.fillStyle = '#444'; ctx.font = `italic 500 34px "Cormorant Garamond"`;
   ctx.fillText('has successfully presented the research paper titled', W/2, bodyY);
