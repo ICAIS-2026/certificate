@@ -606,6 +606,10 @@ function drawCert(ctx, W, H, paper, imgs) {
   drawRectLogo(imgs?.logo2, W/2+logoSpacing, 'SPRINGER');
 
   /* ── TEXT CONTENT ── */
+  const presenterBodyLine = 'presented a paper titled';
+  const conferenceLine = 'at the 4th Annual Conference on Public Finance and Policy jointly organized by Centre for Public Finance, Madras School of Economics and Gulati Institute of Finance and Taxation';
+  const conferenceDateLine = 'held at MSE, Chennai, during 23 - 24 March 2026.';
+
   ctx.textAlign = 'center';
   ctx.fillStyle = '#C8181A'; ctx.font = `900 ${W*0.078}px "Bebas Neue"`;
   ctx.letterSpacing = '12px'; ctx.fillText('CERTIFICATE', W/2, 380);
@@ -628,7 +632,7 @@ function drawCert(ctx, W, H, paper, imgs) {
   /* Body */
   const bodyY = 820;
   ctx.fillStyle = '#444'; ctx.font = `italic 500 34px "Cormorant Garamond"`;
-  ctx.fillText('presented a paper titled', W/2, bodyY);
+  ctx.fillText(presenterBodyLine, W/2, bodyY);
 
   /* Title */
   const titleY = bodyY + 70;
@@ -645,8 +649,7 @@ function drawCert(ctx, W, H, paper, imgs) {
 
   /* Conference info */
   const confY = titleY + lines.length * titleLineH + 44;
-  const confText = 'at the 4th Annual Conference on Public Finance and Policy jointly organized by Centre for Public Finance, Madras School of Economics and Gulati Institute of Finance and Taxation';
-  const confWords = confText.split(' ');
+  const confWords = conferenceLine.split(' ');
   const confLines = [];
   let confLine = '';
   const confMaxW = W * 0.9;
@@ -661,7 +664,7 @@ function drawCert(ctx, W, H, paper, imgs) {
   confLines.forEach((l, i) => ctx.fillText(l, W/2, confY + i * confLineH));
   const confEndY = confY + (confLines.length * confLineH);
   ctx.fillStyle = '#000'; ctx.font = `500 36px "Cormorant Garamond"`;
-  ctx.fillText('held at MSE, Chennai, during 23 - 24 March 2026.', W/2, confEndY + 16);
+  ctx.fillText(conferenceDateLine, W/2, confEndY + 16);
 
   /* Signatures */
   const sigY = confEndY + 170;
