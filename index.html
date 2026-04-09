@@ -612,11 +612,11 @@ function drawCert(ctx, W, H, paper, imgs) {
   const affilLineH = 50;
   const affilY = 790;
   let affilLine = '', affilLines = [];
-  for (let w of affilWords) {
-    const next = affilLine + w + ' ';
+  for (let word of affilWords) {
+    const next = affilLine + word + ' ';
     if (ctx.measureText(next).width > affilMaxW) {
       if (affilLine.trim()) affilLines.push(affilLine.trim());
-      affilLine = w + ' ';
+      affilLine = word + ' ';
       if (ctx.measureText(affilLine).width > affilMaxW) {
         affilLines.push(affilLine.trim());
         affilLine = '';
@@ -627,7 +627,7 @@ function drawCert(ctx, W, H, paper, imgs) {
   if (paper.affil.trim()) affilLines.forEach((l, i) => ctx.fillText(l, W/2, affilY + i * affilLineH));
 
   /* Body */
-  const affilLineCount = Math.max(1, affilLines.length);
+  const affilLineCount = affilLines.length;
   const bodyY = affilY + ((affilLineCount - 1) * affilLineH) + 90;
   ctx.fillStyle = '#444'; ctx.font = `italic 500 34px "Cormorant Garamond"`;
   ctx.fillText('has successfully presented the research paper titled', W/2, bodyY);
