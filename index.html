@@ -607,13 +607,25 @@ function drawCert(ctx, W, H, paper, imgs) {
 
   /* Affiliation */
   ctx.fillStyle = '#333'; ctx.font = `600 38px "DM Sans"`;
-  ctx.fillText(paper.affil, W/2, 790);
+  const affilWords = paper.affil.split(' ');
+  const affilMaxW = W * 0.72;
+  const affilLineH = 50;
+  const affilY = 790;
+  let affilLine = '', affilLines = [];
+  for (let w of affilWords) {
+    if (ctx.measureText(affilLine + w).width > affilMaxW) { affilLines.push(affilLine); affilLine = w + ' '; }
+    else affilLine += w + ' ';
+  }
+  affilLines.push(affilLine);
+  affilLines.forEach((l, i) => ctx.fillText(l.trim(), W/2, affilY + i * affilLineH));
 
   /* Body */
+  const bodyY = affilY + ((affilLines.length - 1) * affilLineH) + 90;
   ctx.fillStyle = '#444'; ctx.font = `italic 500 34px "Cormorant Garamond"`;
-  ctx.fillText('has successfully presented the research paper titled', W/2, 880);
+  ctx.fillText('has successfully presented the research paper titled', W/2, bodyY);
 
   /* Title */
+  const titleY = bodyY + 70;
   ctx.fillStyle = '#C8181A'; ctx.font = `700 44px "Cormorant Garamond"`;
   const tWords = paper.title.split(' ');
   let line = '', lines = [], maxW = W*0.8;
@@ -622,10 +634,10 @@ function drawCert(ctx, W, H, paper, imgs) {
     else line += w + ' ';
   }
   lines.push(line);
-  lines.forEach((l, i) => ctx.fillText(i==0?'"'+l.trim():l.trim()+(i==lines.length-1?'"':''), W/2, 950 + i*65));
+  lines.forEach((l, i) => ctx.fillText(i==0?'"'+l.trim():l.trim()+(i==lines.length-1?'"':''), W/2, titleY + i*65));
 
   /* Conference info */
-  const confY = 950 + lines.length*65 + 40;
+  const confY = titleY + lines.length*65 + 40;
   ctx.fillStyle = '#555'; ctx.font = `500 32px "DM Sans"`;
   ctx.fillText('at the International Conference on Artificial Intelligence and Security', W/2, confY);
   ctx.fillStyle = '#000'; ctx.font = `bold 32px "DM Sans"`;
