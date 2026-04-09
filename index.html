@@ -613,10 +613,18 @@ function drawCert(ctx, W, H, paper, imgs) {
   const affilY = 790;
   let affilLine = '', affilLines = [];
   for (let w of affilWords) {
-    if (ctx.measureText(affilLine + w).width > affilMaxW) { affilLines.push(affilLine); affilLine = w + ' '; }
-    else affilLine += w + ' ';
+    const next = affilLine + w + ' ';
+    if (ctx.measureText(next).width > affilMaxW) {
+      if (affilLine.trim()) affilLines.push(affilLine.trim());
+      affilLine = w + ' ';
+      if (ctx.measureText(affilLine).width > affilMaxW) {
+        affilLines.push(affilLine.trim());
+        affilLine = '';
+      }
+    } else affilLine = next;
   }
-  affilLines.push(affilLine);
+  if (affilLine.trim()) affilLines.push(affilLine.trim());
+  if (affilLines.length === 0) affilLines.push('');
   affilLines.forEach((l, i) => ctx.fillText(l.trim(), W/2, affilY + i * affilLineH));
 
   /* Body */
