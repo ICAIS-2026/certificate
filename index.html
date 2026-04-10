@@ -569,7 +569,16 @@ function drawCert(ctx, W, H, paper, imgs) {
 
     const hasDrawableImage = img && img.width > 0 && img.height > 0;
     if (hasDrawableImage) {
-      ctx.drawImage(img, left, logoY, logoWidth, logoHeight);
+      const coverScale = Math.max(logoWidth / img.width, logoHeight / img.height);
+      const sourceWidth = logoWidth / coverScale;
+      const sourceHeight = logoHeight / coverScale;
+      const sourceX = (img.width - sourceWidth) / 2;
+      const sourceY = (img.height - sourceHeight) / 2;
+      ctx.drawImage(
+        img,
+        sourceX, sourceY, sourceWidth, sourceHeight,
+        left, logoY, logoWidth, logoHeight
+      );
     } else {
       ctx.fillStyle = '#f8f8f8'; ctx.textAlign = 'center';
       ctx.font = 'bold 20px Oswald'; ctx.fillText(label, x, centerY + 8);
