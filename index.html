@@ -513,9 +513,9 @@ function generateCert() {
   const assets = { 
     logo1: 'nmims.png', 
     logo2: 'springer.png',
-    sign1: 'sign1.png', 
-    sign2: 'sign2.png', 
-    sign3: 'sign3.png' 
+    sign1: 'aj.png', 
+    sign2: 'vk.png', 
+    sign3: 'ss.png' 
   };
   
   const imgs = {};
@@ -666,17 +666,30 @@ function drawCert(ctx, W, H, paper, imgs) {
   /* Signatures */
   const sigY = confY + 220;
   const sigSp = W * 0.3;
+  const sigImgW = 240;
+  const sigImgH = 110;
+  const sigImgGap = 12;
   const sigs = [
-    { n: 'Dr. Anshuman Jaswal', r: "Director, SVKM's NMIMS Indore" },
-    { n: 'Dr. Vikas Khare', r: "Associate Dean, STME, SVKM's NMIMS Indore" },
-    { n: 'Dr. Shruti Sharma', r: "Convener, ICAIS 2026" }
+    { n: 'Dr. Anshuman Jaswal', r: "General Chair", img: imgs?.sign1, w: 260, h: 110, gap: 12 },
+    { n: 'Dr. Vikas Khare', r: "General Chair", img: imgs?.sign2, w: 300, h: 150, gap: 5 },
+    { n: 'Dr. Shruti Sharma', r: "Organizing Chair and Convener", img: imgs?.sign3, w: 300, h: 150, gap: 5 }
   ];
 
   [W/2-sigSp, W/2, W/2+sigSp].forEach((sx, i) => {
+    const sig = sigs[i];
+    const hasSigImage = sig.img && sig.img.width > 0 && sig.img.height > 0;
+    if (hasSigImage) {
+      const imgW = sig.w || sigImgW;
+      const imgH = sig.h || sigImgH;
+      const imgX = sx - imgW / 2;
+      const imgGap = sig.gap ?? sigImgGap;
+      const imgY = sigY - imgH - imgGap;
+      ctx.drawImage(sig.img, imgX, imgY, imgW, imgH);
+    }
     ctx.strokeStyle='#333'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(sx-180, sigY); ctx.lineTo(sx+180, sigY); ctx.stroke();
-    ctx.fillStyle='#000'; ctx.font='bold 28px "DM Sans"'; ctx.fillText(sigs[i].n, sx, sigY+45);
+    ctx.fillStyle='#000'; ctx.font='bold 28px "DM Sans"'; ctx.fillText(sig.n, sx, sigY+45);
     ctx.fillStyle='#666'; ctx.font='600 18px "Oswald"'; ctx.letterSpacing='2px';
-    const roleLines = sigs[i].r.split(', ');
+    const roleLines = sig.r.split(', ');
     roleLines.forEach((rl, ri) => ctx.fillText(rl.toUpperCase(), sx, sigY+75 + ri*25));
     ctx.letterSpacing='0px';
   });
