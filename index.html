@@ -682,9 +682,9 @@ function drawCert(ctx, W, H, paper, imgs) {
 async function downloadPDF() {
   const { jsPDF } = window.jspdf;
   const canvas = document.getElementById('certCanvas');
-  const imgData = canvas.toDataURL('image/png', 1.0);
+  const imgData = canvas.toDataURL('image/jpeg', 0.88);
   const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-  pdf.addImage(imgData,'PNG',0,0,297,210,undefined,'FAST');
+  pdf.addImage(imgData,'JPEG',0,0,297,210,undefined,'MEDIUM');
   pdf.save(`ICAIS2026_Certificate.pdf`);
 }
 
