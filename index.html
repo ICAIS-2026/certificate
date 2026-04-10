@@ -570,10 +570,10 @@ function drawCert(ctx, W, H, paper, imgs) {
     const hasDrawableImage = img && img.width > 0 && img.height > 0;
     if (hasDrawableImage) {
       const coverScale = Math.max(logoWidth / img.width, logoHeight / img.height);
-      const sourceWidth = logoWidth / coverScale;
-      const sourceHeight = logoHeight / coverScale;
-      const sourceX = (img.width - sourceWidth) / 2;
-      const sourceY = (img.height - sourceHeight) / 2;
+      const sourceWidth = Math.min(img.width, logoWidth / coverScale);
+      const sourceHeight = Math.min(img.height, logoHeight / coverScale);
+      const sourceX = Math.max(0, (img.width - sourceWidth) / 2);
+      const sourceY = Math.max(0, (img.height - sourceHeight) / 2);
       ctx.drawImage(
         img,
         sourceX, sourceY, sourceWidth, sourceHeight,
