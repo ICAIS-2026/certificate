@@ -557,37 +557,38 @@ function drawCert(ctx, W, H, paper, imgs) {
   ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1.5; ctx.strokeRect(m+15,m+15,W-(m+15)*2,H-(m+15)*2);
 
   /* ── RECTANGULAR LOGO FRAMES ── */
-  const logoWidth = 320, logoHeight = 160, logoY = 140, logoSpacing = W * 0.35;
-  const drawRectLogo = (img, x, label) => {
-    const left = x - (logoWidth / 2);
-    const centerY = logoY + (logoHeight / 2);
+  const logoY = 140, logoSpacing = W * 0.35;
+  const leftLogo = { width: 250, height: 250, label: 'NMIMS' };
+  const rightLogo = { width: 350, height: 175, label: 'SPRINGER' };
+
+  const drawRectLogo = (img, x, cfg) => {
+    const left = x - (cfg.width / 2);
+    const centerY = logoY + (cfg.height / 2);
     ctx.save();
     ctx.shadowBlur = 20; ctx.shadowColor = 'rgba(0,0,0,0.1)';
     ctx.fillStyle = '#fff';
-    ctx.fillRect(left, logoY, logoWidth, logoHeight);
+    ctx.fillRect(left, logoY, cfg.width, cfg.height);
     ctx.restore();
 
     const hasDrawableImage = img && img.width > 0 && img.height > 0;
     if (hasDrawableImage) {
-      const coverScale = Math.max(logoWidth / img.width, logoHeight / img.height);
-      const sourceWidth = Math.min(img.width, logoWidth / coverScale);
-      const sourceHeight = Math.min(img.height, logoHeight / coverScale);
+      const coverScale = Math.max(cfg.width / img.width, cfg.height / img.height);
+      const sourceWidth = Math.min(img.width, cfg.width / coverScale);
+      const sourceHeight = Math.min(img.height, cfg.height / coverScale);
       const sourceX = Math.max(0, (img.width - sourceWidth) / 2);
       const sourceY = Math.max(0, (img.height - sourceHeight) / 2);
       ctx.drawImage(
         img,
         sourceX, sourceY, sourceWidth, sourceHeight,
-        left, logoY, logoWidth, logoHeight
+        left, logoY, cfg.width, cfg.height
       );
     } else {
       ctx.fillStyle = '#f8f8f8'; ctx.textAlign = 'center';
-      ctx.font = 'bold 20px Oswald'; ctx.fillText(label, x, centerY + 8);
+      ctx.font = 'bold 20px Oswald'; ctx.fillText(cfg.label, x, centerY + 8);
     }
-    ctx.strokeStyle = '#C8181A44'; ctx.lineWidth = 4;
-    ctx.strokeRect(left, logoY, logoWidth, logoHeight);
   };
-  drawRectLogo(imgs?.logo1, W/2-logoSpacing, 'NMIMS');
-  drawRectLogo(imgs?.logo2, W/2+logoSpacing, 'SPRINGER');
+  drawRectLogo(imgs?.logo1, W/2-logoSpacing, leftLogo);
+  drawRectLogo(imgs?.logo2, W/2+logoSpacing, rightLogo);
 
   /* ── TEXT CONTENT ── */
   ctx.textAlign = 'center';
