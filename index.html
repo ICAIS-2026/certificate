@@ -891,9 +891,10 @@ function drawCert(ctx, W, H, paper, imgs) {
   ctx.fillText('THIS CERTIFIES THAT', W/2, bY+42);
 
   /* Name */
+  const nameY = 740;
   ctx.fillStyle = '#000'; ctx.font = `bold ${W*0.062}px "Cormorant Garamond"`;
-  ctx.fillText(paper.name || '', W/2, 700);
-  ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(W/2-400, 730); ctx.lineTo(W/2+400, 730); ctx.stroke();
+  ctx.fillText(paper.name || '', W/2, nameY);
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(W/2-400, nameY + 30); ctx.lineTo(W/2+400, nameY + 30); ctx.stroke();
 
   /* Affiliation */
   ctx.fillStyle = '#333'; ctx.font = `600 38px "DM Sans"`;
@@ -955,7 +956,7 @@ function drawCert(ctx, W, H, paper, imgs) {
   ctx.fillText('ICAIS 2026 · April 2–3, 2026 · Indore, India (Hybrid Mode)', W/2, confY+50);
 
   /* Signatures */
-  const sigY = confY + 220;
+  const sigY = H - 250;
   const sigSp = W * 0.3;
   const sigImgW = 240;
   const sigImgH = 110;
