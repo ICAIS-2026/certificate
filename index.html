@@ -6,6 +6,7 @@
 <title>ICAIS 2026 — Certificate Portal</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,500;1,600&family=Bebas+Neue&family=Oswald:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -283,20 +284,20 @@ select.field-input option {
     <div class="pg-title">Select<br>Your Role</div>
     <div class="pg-sub">Choose your participation category to access certificates</div>
   </div>
-  <div class="tracks-grid">
-    <div class="track-btn" onclick="go('pg-tracks','pg-t1')">
+    <div class="tracks-grid">
+    <div class="track-btn" onclick="setActiveRole('presentation')">
       <div class="track-num">01</div>
       <div class="track-label">Presentation</div>
     </div>
-    <div class="track-btn" onclick="showSoon('Session Chair')">
+    <div class="track-btn" onclick="setActiveRole('sessionChair')">
       <div class="track-num">02</div>
       <div class="track-label">Session Chair</div>
     </div>
-    <div class="track-btn" onclick="showSoon('Reviewer')">
+    <div class="track-btn" onclick="setActiveRole('reviewer')">
       <div class="track-num">03</div>
       <div class="track-label">Reviewer</div>
     </div>
-    <div class="track-btn" onclick="showSoon('Org. Committee')">
+    <div class="track-btn" onclick="setActiveRole('orgCommittee')">
       <div class="track-num">04</div>
       <div class="track-label">Organisation Committee</div>
     </div>
@@ -325,26 +326,27 @@ select.field-input option {
       Roles
     </button>
     <div class="pg-header" style="text-align:left;">
-      <div class="pg-eyebrow">Presenters Registry</div>
+      <div class="pg-eyebrow" id="role-eyebrow">Presenters Registry</div>
       <div class="pg-title" style="font-size: clamp(38px, 8vw, 68px);">Download<br>Certificate</div>
     </div>
     <div class="portal-card">
       <div id="status-t1" class="status-bar"></div>
-      <div class="field-group">
-        <label class="field-label">Paper ID</label>
+      <div class="field-group" id="group-id">
+        <label class="field-label" id="label-id">Paper ID</label>
         <input class="field-input" type="text" id="inp-id" placeholder="e.g. 21" oninput="lookupPaper()" autocomplete="off">
+        <select id="sel-lookup" class="field-input" style="display:none;" onchange="selectLookupOption()"></select>
       </div>
-      <div class="field-group">
-        <label class="field-label">Paper Title</label>
+      <div class="field-group" id="group-title">
+        <label class="field-label" id="label-title">Paper Title</label>
         <input class="field-input" type="text" id="inp-title" readonly>
       </div>
-      <div class="field-group">
-        <label class="field-label">Author Name</label>
+      <div class="field-group" id="group-author">
+        <label class="field-label" id="label-author">Author Name</label>
         <input class="field-input" type="text" id="inp-author" placeholder="Verification Pending" readonly>
         <select id="sel-author" class="field-input" style="display:none;" onchange="selectAuthor()"></select>
       </div>
-      <div class="field-group">
-        <label class="field-label">Affiliation</label>
+      <div class="field-group" id="group-affil">
+        <label class="field-label" id="label-affil">Affiliation</label>
         <input class="field-input" type="text" id="inp-affil" readonly>
       </div>
       <button class="btn-main" id="gen-btn" disabled onclick="generateCert()" style="width:100%; margin-top:10px;">
@@ -372,46 +374,163 @@ select.field-input option {
 </section>
 
 <script>
-let paperDB = [];
-let currentPaper = null;
+let allRecords = [];
+let dataBySheet = {};
+let dataBySheetNormalized = {};
+let sheetOrder = [];
+let currentSheetName = '';
+let currentRole = '';
+let currentRecord = null;
 let currentMatches = [];
+let currentLookupRecords = [];
+
+const roleConfigs = {
+  presentation: {
+    label: 'Presentation',
+    sheetName: 'Certificates',
+    lookup: { label: 'Paper ID', placeholder: 'e.g. 21', keys: ['id'] },
+    fields: [
+      { key: 'title', label: 'Paper Title' },
+      { key: 'name', label: 'Author Name', allowSelect: true },
+      { key: 'affil', label: 'Affiliation' }
+    ],
+    hasHeaderRow: true,
+    headerAliases: {
+      id: ['id', 'paperid', 'paper_id', 'paper', 'paperno', 'papernumber'],
+      title: ['title', 'papertitle'],
+      name: ['author', 'authorname', 'name', 'presenter'],
+      affil: ['affiliation', 'affil', 'organisation', 'organization', 'institute', 'department']
+    },
+    cert: { type: 'presentation' }
+  },
+  reviewer: {
+    label: 'Reviewer',
+    sheetName: 'Reviewers',
+    lookup: { label: 'Email Address', placeholder: 'e.g. name@example.com', keys: ['email'] },
+    fields: [
+      { key: 'email', label: 'Email' },
+      { key: 'name', label: 'Reviewer Name', allowSelect: true },
+      { key: 'affil', label: 'Organization' }
+    ],
+    hasHeaderRow: false,
+    columns: ['name', 'email', 'affil'],
+    cert: { type: 'role', role: 'Reviewer' }
+  },
+  sessionChair: {
+    label: 'Session Chair',
+    sheetName: 'Session Chairs ',
+    lookup: { label: 'Select Name', placeholder: '', keys: ['name'], useDropdown: true },
+    fields: [
+      { key: 'name', label: 'Session Chair Name', allowSelect: true }
+    ],
+    hasHeaderRow: false,
+    columns: ['name'],
+    cert: { type: 'role', role: 'Session Chair' }
+  },
+  orgCommittee: {
+    label: 'Organisation Committee',
+    sheetName: 'Organizing Committee',
+    lookup: { label: 'Select Member', placeholder: '', keys: ['name'], useDropdown: true },
+    fields: [
+      { key: 'name', label: 'Committee Member Name', allowSelect: true }
+    ],
+    hasHeaderRow: false,
+    columns: ['name'],
+    cert: { type: 'role', role: 'Organising Committee', bodyLine: 'has served on the Organising Committee' }
+  }
+};
 
 async function loadData() {
   try {
-    const r = await fetch('data.txt');
+    const r = await fetch('data.xlsx');
     if (!r.ok) throw new Error('not found');
-    const txt = await r.text();
-    parseTxt(txt);
+    const buf = await r.arrayBuffer();
+    parseWorkbook(buf);
   } catch(e) {
-    /* Multi-author test case for ID 21 and multiline examples */
-    parseTxt(`
-21 | Predictive Maintenance of Wind Turbines Using Artificial Neural Networks for Anomaly Detection | Anitha Thangasamy | "Department of Computer Science and Engineering,
-Sathyabama Institute of Science and Technology, Chennai, India"
-21 | Predictive Maintenance of Wind Turbines Using Artificial Neural Networks for Anomaly Detection | Dharani M K | "Department of Computer Science and Engineering,
-Sathyabama Institute of Science and Technology, Chennai, India"
-309 | Revolutionizing Electronic Health Record Systems with AI | Mohini Jindal | "Independent Reseacher, Mckinney, 75072, TX, USA"
-`);
+    console.error('Failed to load data.xlsx', e);
   }
 }
 
-/**
- * Advanced Multi-line & Quoted Regex Parser
- * Handles pattern: [ID] | [Title] | [Author] | "[Affiliation]"
- */
-function parseTxt(txt) {
-  paperDB = [];
-  // Regex captures: 1: ID, 2: Title, 3: Author, 4: Quoted Affiliation
-  const regex = /([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*"([\s\S]+?)"/g;
-  let match;
-  while ((match = regex.exec(txt)) !== null) {
-    paperDB.push({
-      id: match[1].trim(),
-      // Replace internal newlines and multiple spaces with a single space for visual clarity
-      title: match[2].replace(/\s+/g, ' ').trim(),
-      author: match[3].replace(/\s+/g, ' ').trim(),
-      affil: match[4].replace(/\s+/g, ' ').trim()
-    });
+function normalizeHeader(s) {
+  return String(s || '').replace(/\s+/g,'').toLowerCase();
+}
+
+function cleanText(v) {
+  return String(v ?? '').replace(/\s+/g,' ').trim();
+}
+
+function parseWorkbook(buf) {
+  allRecords = [];
+  dataBySheet = {};
+  dataBySheetNormalized = {};
+  sheetOrder = [];
+  if (!window.XLSX) {
+    throw new Error('xlsx not loaded');
   }
+
+  const wb = XLSX.read(buf, { type: 'array' });
+  const configBySheet = {};
+  Object.values(roleConfigs).forEach((cfg) => {
+    configBySheet[normalizeSheetName(cfg.sheetName)] = cfg;
+  });
+
+  wb.SheetNames.forEach((name) => {
+    const sheet = wb.Sheets[name];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    if (!rows.length) return;
+
+    const cfg = configBySheet[normalizeSheetName(name)];
+    const records = [];
+
+    if (cfg && cfg.columns && !cfg.hasHeaderRow) {
+      rows.forEach((row) => {
+        if (!row || row.every((c) => String(c).trim() === '')) return;
+        const rec = {};
+        cfg.columns.forEach((key, idx) => {
+          rec[key] = cleanText(row[idx]);
+        });
+        if (Object.values(rec).every((v) => !v)) return;
+        records.push(rec);
+      });
+    } else {
+      const headerRowIndex = rows.findIndex((r) => r.some((c) => String(c).trim() !== ''));
+      if (headerRowIndex === -1) return;
+      const headerRow = rows[headerRowIndex];
+      const headerAliases = (cfg && cfg.headerAliases) || roleConfigs.presentation.headerAliases;
+
+      const map = { id: -1, title: -1, name: -1, affil: -1 };
+      headerRow.forEach((cell, idx) => {
+        const key = normalizeHeader(cell);
+        Object.entries(headerAliases).forEach(([field, aliases]) => {
+          if (aliases.includes(key)) map[field] = idx;
+        });
+      });
+
+      rows.slice(headerRowIndex + 1).forEach((row) => {
+        if (!row || row.every((c) => String(c).trim() === '')) return;
+        const id = map.id >= 0 ? cleanText(row[map.id]) : '';
+        const title = map.title >= 0 ? cleanText(row[map.title]) : '';
+        const nameVal = map.name >= 0 ? cleanText(row[map.name]) : '';
+        const affil = map.affil >= 0 ? cleanText(row[map.affil]) : '';
+
+        if (!id && !title && !nameVal && !affil) return;
+        records.push({ id, title, name: nameVal, affil });
+      });
+    }
+
+    if (records.length) {
+      dataBySheet[name] = records;
+      dataBySheetNormalized[normalizeSheetName(name)] = records;
+      sheetOrder.push(name);
+      allRecords = allRecords.concat(records);
+    }
+  });
+
+  if (!currentSheetName && sheetOrder.length) {
+    currentSheetName = sheetOrder[0];
+  }
+
+  refreshLookupOptions();
 }
 
 function normalize(s) { return s.replace(/\s+/g,'').toLowerCase(); }
@@ -419,7 +538,13 @@ function normalize(s) { return s.replace(/\s+/g,'').toLowerCase(); }
 function lookupPaper() {
   const raw = document.getElementById('inp-id').value;
   const key = normalize(raw);
-  currentMatches = paperDB.filter(p => normalize(p.id) === key);
+  const cfg = getActiveRoleConfig();
+  const activeDB = getActiveDB();
+  const lookupKeys = (cfg.lookup && cfg.lookup.keys) || ['id'];
+  const allowSelect = cfg.fields.some((field) => field.key === 'name' && field.allowSelect);
+  currentMatches = activeDB.filter((rec) =>
+    lookupKeys.some((k) => normalize(rec[k] || '') === key)
+  );
   
   const inpAuthor = document.getElementById('inp-author');
   const selAuthor = document.getElementById('sel-author');
@@ -435,7 +560,7 @@ function lookupPaper() {
     inpTitle.value = '';
     inpAffil.value = '';
     btn.disabled = true;
-    currentPaper = null;
+    currentRecord = null;
   };
 
   if (!raw.trim()) {
@@ -449,29 +574,25 @@ function lookupPaper() {
     inpAuthor.style.display = 'block';
     selAuthor.style.display = 'none';
     const match = currentMatches[0];
-    inpTitle.value = match.title;
-    inpAuthor.value = match.author;
-    inpAffil.value = match.affil;
+    fillRoleFields(match);
     btn.disabled = false;
-    currentPaper = match;
-  } else if (currentMatches.length > 1) {
-    st.className = 'status-bar ok'; st.textContent = '✓ Multiple authors found — Please select your name below';
+    currentRecord = match;
+  } else if (currentMatches.length > 1 && allowSelect) {
+    st.className = 'status-bar ok'; st.textContent = '✓ Multiple matches found — Please select your name below';
     inpAuthor.style.display = 'none';
     selAuthor.style.display = 'block';
     selAuthor.innerHTML = '<option value="" disabled selected>-- Select your name --</option>';
     currentMatches.forEach((m, idx) => {
       const opt = document.createElement('option');
       opt.value = idx;
-      opt.textContent = m.author;
+      opt.textContent = m.name || 'Unknown';
       selAuthor.appendChild(opt);
     });
-    // Set shared fields based on first match until specific selection
-    inpTitle.value = currentMatches[0].title;
-    inpAffil.value = currentMatches[0].affil;
-    currentPaper = null;
+    fillRoleFields(currentMatches[0], { skipName: true });
+    currentRecord = null;
     btn.disabled = true;
   } else {
-    st.className = 'status-bar err'; st.textContent = '✗ Paper ID not registered';
+    st.className = 'status-bar err'; st.textContent = '✗ Entry not registered';
     resetFields();
   }
 }
@@ -484,12 +605,174 @@ function selectAuthor() {
   const inpAffil = document.getElementById('inp-affil');
   
   if (idx !== "") {
-    currentPaper = currentMatches[idx];
-    // Update title and affil specifically for the selected author
-    inpTitle.value = currentPaper.title;
-    inpAffil.value = currentPaper.affil;
+    currentRecord = currentMatches[idx];
+    fillRoleFields(currentRecord);
     btn.disabled = false;
   }
+}
+
+function resetPortalFields() {
+  const inpAuthor = document.getElementById('inp-author');
+  const selAuthor = document.getElementById('sel-author');
+  const selLookup = document.getElementById('sel-lookup');
+  const inpTitle = document.getElementById('inp-title');
+  const inpAffil = document.getElementById('inp-affil');
+  const st = document.getElementById('status-t1');
+  const btn = document.getElementById('gen-btn');
+
+  st.style.display = 'none';
+  inpAuthor.style.display = 'block';
+  selAuthor.style.display = 'none';
+  selAuthor.innerHTML = '';
+  selLookup.value = '';
+  inpAuthor.value = '';
+  inpTitle.value = '';
+  inpAffil.value = '';
+  btn.disabled = true;
+  currentRecord = null;
+  currentMatches = [];
+  currentLookupRecords = [];
+  document.getElementById('inp-id').value = '';
+}
+
+function normalizeSheetName(name) {
+  return String(name || '').trim().toLowerCase();
+}
+
+function getActiveRoleConfig() {
+  return roleConfigs[currentRole] || roleConfigs.presentation;
+}
+
+function getActiveDB() {
+  return currentSheetName
+    ? (dataBySheet[currentSheetName] || dataBySheetNormalized[normalizeSheetName(currentSheetName)] || [])
+    : allRecords;
+}
+
+function applyRoleFields(cfg) {
+  const groupId = document.getElementById('group-id');
+  const groupTitle = document.getElementById('group-title');
+  const groupAuthor = document.getElementById('group-author');
+  const groupAffil = document.getElementById('group-affil');
+  const inputId = document.getElementById('inp-id');
+  const selectLookup = document.getElementById('sel-lookup');
+  const useDropdown = Boolean(cfg.lookup && cfg.lookup.useDropdown);
+
+  groupId.style.display = 'block';
+  groupTitle.style.display = 'none';
+  groupAuthor.style.display = 'none';
+  groupAffil.style.display = 'none';
+
+  if (useDropdown) {
+    inputId.style.display = 'none';
+    selectLookup.style.display = 'block';
+  } else {
+    inputId.style.display = 'block';
+    selectLookup.style.display = 'none';
+  }
+
+  document.getElementById('label-id').textContent = cfg.lookup.label;
+  document.getElementById('inp-id').placeholder = cfg.lookup.placeholder;
+
+  cfg.fields.forEach((field) => {
+    if (field.key === 'title' || field.key === 'email') {
+      groupTitle.style.display = 'block';
+      document.getElementById('label-title').textContent = field.label;
+    }
+    if (field.key === 'name') {
+      groupAuthor.style.display = 'block';
+      document.getElementById('label-author').textContent = field.label;
+    }
+    if (field.key === 'affil') {
+      groupAffil.style.display = 'block';
+      document.getElementById('label-affil').textContent = field.label;
+    }
+  });
+}
+
+function fillRoleFields(record, options = {}) {
+  const cfg = getActiveRoleConfig();
+  const skipName = options.skipName;
+
+  cfg.fields.forEach((field) => {
+    if (field.key === 'title') {
+      document.getElementById('inp-title').value = record.title || '';
+    }
+    if (field.key === 'email') {
+      document.getElementById('inp-title').value = record.email || '';
+    }
+    if (field.key === 'name' && !skipName) {
+      document.getElementById('inp-author').value = record.name || '';
+    }
+    if (field.key === 'affil') {
+      document.getElementById('inp-affil').value = record.affil || '';
+    }
+  });
+}
+
+function refreshLookupOptions() {
+  const cfg = getActiveRoleConfig();
+  if (cfg.lookup && cfg.lookup.useDropdown) {
+    populateLookupOptions(cfg);
+  }
+}
+
+function populateLookupOptions(cfg) {
+  const selectLookup = document.getElementById('sel-lookup');
+  const activeDB = getActiveDB();
+  const displayKey = (cfg.lookup && cfg.lookup.displayKey) || cfg.lookup.keys[0];
+  currentLookupRecords = activeDB;
+  selectLookup.innerHTML = '<option value="" disabled selected>-- Select --</option>';
+
+  if (!activeDB.length) {
+    const opt = document.createElement('option');
+    opt.disabled = true;
+    opt.textContent = 'No entries available';
+    selectLookup.appendChild(opt);
+    return;
+  }
+
+  activeDB.forEach((rec, idx) => {
+    const opt = document.createElement('option');
+    opt.value = idx;
+    opt.textContent = rec[displayKey] || 'Unknown';
+    selectLookup.appendChild(opt);
+  });
+}
+
+function selectLookupOption() {
+  const selectLookup = document.getElementById('sel-lookup');
+  const st = document.getElementById('status-t1');
+  const btn = document.getElementById('gen-btn');
+  const idx = selectLookup.value;
+  if (idx === '') return;
+
+  const record = currentLookupRecords[Number(idx)];
+  if (!record) return;
+  const cfg = getActiveRoleConfig();
+  const lookupKey = cfg.lookup.keys[0];
+
+  currentRecord = record;
+  fillRoleFields(record);
+  document.getElementById('inp-id').value = record[lookupKey] || '';
+  st.className = 'status-bar ok';
+  st.textContent = '✓ Record Verified';
+  btn.disabled = false;
+}
+
+function setActiveRole(roleKey) {
+  const cfg = roleConfigs[roleKey];
+  if (!cfg) return;
+  currentRole = roleKey;
+  currentSheetName = cfg.sheetName;
+  const roleLabel = document.getElementById('role-eyebrow');
+  if (roleLabel) {
+    roleLabel.textContent = `${cfg.label} Registry`;
+  }
+  resetPortalFields();
+  applyRoleFields(cfg);
+  refreshLookupOptions();
+  go('pg-tracks','pg-t1');
 }
 
 function go(f, t) {
@@ -504,7 +787,7 @@ function showSoon(role) {
 }
 
 function generateCert() {
-  if (!currentPaper) return;
+  if (!currentRecord) return;
   go('pg-t1','pg-cert');
   const canvas = document.getElementById('certCanvas');
   const ctx = canvas.getContext('2d');
@@ -525,8 +808,8 @@ function generateCert() {
   Object.entries(assets).forEach(([key, src]) => {
     const img = new Image();
     img.src = src;
-    img.onload = () => { imgs[key] = img; if(++loaded === target) drawCert(ctx, W, H, currentPaper, imgs); };
-    img.onerror = () => { imgs[key] = null; if(++loaded === target) drawCert(ctx, W, H, currentPaper, imgs); };
+    img.onload = () => { imgs[key] = img; if(++loaded === target) drawCert(ctx, W, H, currentRecord, imgs); };
+    img.onerror = () => { imgs[key] = null; if(++loaded === target) drawCert(ctx, W, H, currentRecord, imgs); };
   });
 }
 
@@ -609,12 +892,12 @@ function drawCert(ctx, W, H, paper, imgs) {
 
   /* Name */
   ctx.fillStyle = '#000'; ctx.font = `bold ${W*0.062}px "Cormorant Garamond"`;
-  ctx.fillText(paper.author, W/2, 700);
+  ctx.fillText(paper.name || '', W/2, 700);
   ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(W/2-400, 730); ctx.lineTo(W/2+400, 730); ctx.stroke();
 
   /* Affiliation */
   ctx.fillStyle = '#333'; ctx.font = `600 38px "DM Sans"`;
-  const affilText = paper.affil.trim();
+  const affilText = (paper.affil || '').trim();
   const affilMaxW = W * 0.72;
   const affilLineH = 50;
   const affilY = 790;
@@ -641,23 +924,31 @@ function drawCert(ctx, W, H, paper, imgs) {
   /* Body */
   const affilLineCount = affilLines.length > 0 ? affilLines.length : 1;
   const bodyY = affilY + ((affilLineCount - 1) * affilLineH) + 90;
+  const cfg = getActiveRoleConfig();
   ctx.fillStyle = '#444'; ctx.font = `italic 500 34px "Cormorant Garamond"`;
-  ctx.fillText('has successfully presented the research paper titled', W/2, bodyY);
+  const bodyLine = cfg.cert.type === 'presentation'
+    ? 'has successfully presented the research paper titled'
+    : (cfg.cert.bodyLine || `has served as ${cfg.cert.role}`);
+  ctx.fillText(bodyLine, W/2, bodyY);
 
-  /* Title */
-  const titleY = bodyY + 70;
-  ctx.fillStyle = '#C8181A'; ctx.font = `700 44px "Cormorant Garamond"`;
-  const tWords = paper.title.split(' ');
-  let line = '', lines = [], maxW = W*0.8;
-  for(let w of tWords) {
-    if(ctx.measureText(line + w).width > maxW) { lines.push(line); line = w + ' '; }
-    else line += w + ' ';
+  let confY = bodyY + 70;
+
+  if (cfg.cert.type === 'presentation' && paper.title) {
+    /* Title */
+    const titleY = bodyY + 70;
+    ctx.fillStyle = '#C8181A'; ctx.font = `700 44px "Cormorant Garamond"`;
+    const tWords = paper.title.split(' ');
+    let line = '', lines = [], maxW = W*0.8;
+    for(let w of tWords) {
+      if(ctx.measureText(line + w).width > maxW) { lines.push(line); line = w + ' '; }
+      else line += w + ' ';
+    }
+    lines.push(line);
+    lines.forEach((l, i) => ctx.fillText(i==0?'"'+l.trim():l.trim()+(i==lines.length-1?'"':''), W/2, titleY + i*65));
+    confY = titleY + lines.length*65 + 40;
   }
-  lines.push(line);
-  lines.forEach((l, i) => ctx.fillText(i==0?'"'+l.trim():l.trim()+(i==lines.length-1?'"':''), W/2, titleY + i*65));
 
   /* Conference info */
-  const confY = titleY + lines.length*65 + 40;
   ctx.fillStyle = '#555'; ctx.font = `500 32px "DM Sans"`;
   ctx.fillText('at the International Conference on Artificial Intelligence and Security', W/2, confY);
   ctx.fillStyle = '#000'; ctx.font = `bold 32px "DM Sans"`;
