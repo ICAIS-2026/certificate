@@ -898,7 +898,7 @@ function drawCert(ctx, W, H, paper, imgs) {
 
   /* Affiliation */
   const cfg = getActiveRoleConfig();
-  const affilTopPad = cfg.cert.type === 'presentation' ? 20 : 0;
+  const affilTopPad = 20;
   ctx.fillStyle = '#333'; ctx.font = `600 38px "DM Sans"`;
   const affilText = (paper.affil || '').trim();
   const affilMaxW = W * 0.72;
